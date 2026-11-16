@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WatchEarnUSDT</title>
+<style>
+body{margin:0;background:#101827;color:white;font-family:Arial,sans-serif}
+header{background:#17263d;padding:22px;text-align:center}
+h1{color:#36d399}
+main{max-width:420px;margin:30px auto;padding:20px}
+.card{background:#1d2b42;padding:22px;border-radius:14px;margin-bottom:18px}
+input{box-sizing:border-box;width:100%;padding:14px;margin:9px 0;border:0;border-radius:8px}
+button{width:100%;padding:14px;margin:7px 0;border:0;border-radius:8px;background:#10b981;color:white;font-weight:bold}
+button.secondary{background:#334b68}
+.balance{font-size:32px;color:#36d399;font-weight:bold}
+small{color:#b7c5d8}
+</style>
+</head>
+<body>
+<header>
+<h1>WatchEarnUSDT</h1>
+<p>Watch • Earn • Withdraw</p>
+</header>
+<main>
+<div class="card" id="auth">
+<h2>Create Account / Login</h2>
+<input id="email" type="email" placeholder="Email address">
+<input id="password" type="password" placeholder="Password">
+<button id="register">Register</button>
+<button class="secondary" id="login">Login</button>
+<p id="message"></p>
+</div>
+
+<div class="card" id="dashboard" hidden>
+<h2>Welcome!</h2>
+<p>Your Balance</p>
+<div class="balance" id="balance">$0.00</div>
+<p id="userEmail"></p>
+<button class="secondary" id="logout">Logout</button>
+<small>Ad rewards and withdrawals will be enabled after secure backend setup.</small>
+</div>
+</main>
+
+<script type="module">
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
+
+import {
+ getAuth, createUserWithEmailAndPassword,
+ signInWithEmailAndPassword, onAuthStateChanged,
+ signOut
+} from "https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js";
+
+import {
+ getFirestore, doc, getDoc, setDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js";
+
+const firebaseConfig = {
+ apiKey: "AIzaSyB4otvrgXgbYHsFY3wTQLdOItOOpbl9y4w",
+ authDomain: "watchearnusdt.firebaseapp.com",
+ projectId: "watchearnusdt",
+ storageBucket: "watchearnusdt.firebasestorage.app",
+ messagingSenderId: "827526256784",
+ appId: "1:827526256784:web:13f518cadf6fbc71f16015",
+ measurementId: "G-LJTXRQ771J"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const $ = id => document.getElementById(id);
+
+$("register").onclick = async () => {
+ try {
+  const email = $("email").value.trim();
+  const password = $("password").value;
+  const result = await createUserWithEmailAndPassword(auth,email,password);
+  await setDoc(doc(db,"users",result.user.uid),{
+   email:email,
+   balanceCents:0,
+   createdAt:serverTimestamp()
+  });
+  $("message").textContent = "Account created successfully!";
+ } catch(e) {
+  $("message").textContent = e.message;
+ }
+};
+
+$("login").onclick = async () => {
+ try {
+  await signInWithEmailAndPassword(
+   auth,$("email").value.trim(),$("password").value
+  );
+  $("message").textContent = "Login successful!";
+ } catch(e) {
+  $("message").textContent = e.message;
+ }
+};
+
+$("logout").onclick = () => signOut(auth);
+
+onAuthStateChanged(auth,async user=>{
+ $("auth").hidden = !!user;
+ $("dashboard").hidden = !user;
+
+ if(user){
+  $("userEmail").textContent = user.email;
+  try {
+   const snap = await getDoc(doc(db,"users",user.uid));
+   if(snap.exists()){
+    const cents = snap.data().balanceCents || 0;
+    $("balance").textContent = "$" + (cents/100).toFixed(2);
+   }
+  } catch(e) {
+   $("balance").textContent = "Unable to load";
+  }
+ }
+});
+</script>
+</body>
+</html>
